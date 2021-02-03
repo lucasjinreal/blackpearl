@@ -11,13 +11,14 @@ import (
 	"path/filepath"
 	"time"
 
-	"./picbed"
+	//"./picbed"
 	"github.com/atotto/clipboard"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 	"gitlab.com/jinfagang/colorgo"
 	"gopkg.in/yaml.v2"
 
-	"./models"
+	"blackpearl/models"
+	"blackpearl/components"
 )
 
 func welcome() {
@@ -83,21 +84,21 @@ func main() {
 				Category: "Writting",
 				Flags: []cli.Flag{
 					&cli.StringFlag{
-						Name:        "title",   // 配置名称
-						Value:       "no_title",   // 缺省配置值
-						Aliases: []string{"t"},
+						Name:        "title",    // 配置名称
+						Value:       "no_title", // 缺省配置值
+						Aliases:     []string{"t"},
 						Usage:       "Blog title", // 配置描述
 						Destination: &blogTitle,   // 保存配置值
 					},
 					&cli.BoolFlag{
-						Name:        "date",                              // 配置名称
-						Aliases: []string{"d"},
+						Name:        "date", // 配置名称
+						Aliases:     []string{"d"},
 						Usage:       "Set using date as blog title prefix.", // 配置描述
 						Destination: &blogUseDate,                           // 保存配置值
 					},
 				},
 				Action: func(c *cli.Context) error { // 函数入口
-					lang := detectLang(blogTitle)
+					lang := components.DetectLang(blogTitle)
 					if blogUseDate {
 						fmt.Print(cg.BoldStart)
 						cg.Foreground(cg.Green, true)
@@ -106,17 +107,17 @@ func main() {
 						var datePrefix = time.Now().Format("2006_01_02_03_")
 						blogTitle = datePrefix + blogTitle
 					}
-					blog := Blog{
+					blog := components.Blog{
 						Title:         blogTitle,
-						Author:        getCurrentUserName(),
-						CreateTime:    getNowTimeString(),
-						Category:      IntelligentCategorize(blogTitle, lang),
-						Summary:       generateSummary(blogTitle, lang),
+						Author:        components.GetCurrentUserName(),
+						CreateTime:    components.GetNowTimeString(),
+						Category:      components.IntelligentCategorize(blogTitle, lang),
+						Summary:       components.GenerateSummary(blogTitle, lang),
 						SavePath:      "./",
-						CopyrightInfo: getCopyrightInfo(lang),
+						CopyrightInfo: components.GetCopyrightInfo(lang),
 					}
 
-					WriteBlog(blog)
+					components.WriteBlog(blog)
 					fmt.Print(cg.BoldStart)
 					cg.Foreground(cg.Yellow, true)
 					fmt.Println("write blog templates success!")
@@ -131,15 +132,15 @@ func main() {
 				Category: "Writting",
 				Flags: []cli.Flag{
 					&cli.StringFlag{
-						Name:        "path",      // 配置名称
-						Value:       "",             // 缺省配置值
-						Aliases: []string{"p"},
+						Name:        "path", // 配置名称
+						Value:       "",     // 缺省配置值
+						Aliases:     []string{"p"},
 						Usage:       "image path",   // 配置描述
 						Destination: &uploadImgPath, // 保存配置值
 					},
 					&cli.BoolFlag{
-						Name:        "clipboard",                           // 配置名称
-						Aliases: []string{"c"},
+						Name:        "clipboard", // 配置名称
+						Aliases:     []string{"c"},
 						Usage:       "Uploading image copies from clipboard.", // 配置描述
 						Destination: &uploadClipboard,                         // 保存配置值
 					},
@@ -152,20 +153,20 @@ func main() {
 						if Exists(uploadImgPath) {
 							// upload this image using picbed
 							fmt.Printf("uploading from: %s\n", uploadImgPath)
-							imgBytes, err := ioutil.ReadFile(uploadImgPath)
-							if err != nil {
-								fmt.Println(err)
-							}
-							imgParam := picbed.ImageParam{
-								Name:    filepath.Base(uploadImgPath),
-								Type:    "jpg",
-								Content: &imgBytes,
-							}
-							// using Ali as default
-							client := picbed.Ali{FileLimit: nil, MaxSize: 5024}
-							res, _ := client.Upload(&imgParam)
-							fmt.Println(res.Url)
-							clipboard.WriteAll(res.Url)
+							// imgBytes, err := ioutil.ReadFile(uploadImgPath)
+							// if err != nil {
+							// 	fmt.Println(err)
+							// }
+							// imgParam := picbed.ImageParam{
+							// 	Name:    filepath.Base(uploadImgPath),
+							// 	Type:    "jpg",
+							// 	Content: &imgBytes,
+							// }
+							// // using Ali as default
+							// client := picbed.Ali{FileLimit: nil, MaxSize: 5024}
+							// res, _ := client.Upload(&imgParam)
+							// fmt.Println(res.Url)
+							// clipboard.WriteAll(res.Url)
 							fmt.Println("result url has been copied to your clipboard.")
 						} else {
 							fmt.Printf("%s does not exist!\n", uploadImgPath)
@@ -189,16 +190,16 @@ func main() {
 				Category: "UranusMessage",
 				Flags: []cli.Flag{
 					&cli.StringFlag{
-						Name:        "content",                // 配置名称
-						Value:       "",                          // 缺省配置值
-						Aliases: []string{"c"},
+						Name:        "content", // 配置名称
+						Value:       "",        // 缺省配置值
+						Aliases:     []string{"c"},
 						Usage:       "string or image/file path", // 配置描述
 						Destination: &pushContent,                // 保存配置值
 					},
 					&cli.StringFlag{
-						Name:        "bind",                                // 配置名称
-						Value:       "",                                       // 缺省配置值
-						Aliases: []string{"b"},
+						Name:        "bind", // 配置名称
+						Value:       "",     // 缺省配置值
+						Aliases:     []string{"b"},
 						Usage:       "UserAcc you bind for receive messages.", // 配置描述
 						Destination: &pushBindUserAcc,                         // 保存配置值
 					},
@@ -210,7 +211,7 @@ func main() {
 				},
 				Action: func(c *cli.Context) error {
 					if pushBindUserAcc != "" {
-						// save bind 
+						// save bind
 						fmt.Printf("[uranus bind] binding receive user acc: %s\n", pushBindUserAcc)
 						// var configData = `
 						// 	networks:
@@ -223,19 +224,19 @@ func main() {
 						// TODO: only image support for now
 						// upload this image using picbed
 						fmt.Printf("[uranus push] image file, uploading from: %s\n", pushContent)
-						imgBytes, err := ioutil.ReadFile(pushContent)
-						if err != nil {
-							fmt.Println(err)
-						}
-						imgParam := picbed.ImageParam{
-							Name:    filepath.Base(pushContent),
-							Type:    "jpg",
-							Content: &imgBytes,
-						}
-						// using Ali as default
-						client := picbed.Ali{FileLimit: nil, MaxSize: 5024}
-						res, _ := client.Upload(&imgParam)
-						pushContent = res.Url
+						// imgBytes, err := ioutil.ReadFile(pushContent)
+						// if err != nil {
+						// 	fmt.Println(err)
+						// }
+						// imgParam := picbed.ImageParam{
+						// 	Name:    filepath.Base(pushContent),
+						// 	Type:    "jpg",
+						// 	Content: &imgBytes,
+						// }
+						// // using Ali as default
+						// client := picbed.Ali{FileLimit: nil, MaxSize: 5024}
+						// res, _ := client.Upload(&imgParam)
+						// pushContent = res.Url
 					} else if pushUseMemory {
 						// upload image to url from memory
 					} else {
@@ -247,9 +248,9 @@ func main() {
 					// call api/v2/ext_blackpearl here
 					// target_user_acc && content
 					// do a post with url
-					resp, err_ := http.PostForm(apiExtBlackPearl, url.Values{"target_acc": {targetAcc}, "content": {pushContent}})
-					if err_ != nil {
-						fmt.Printf("Got error from server: %s\n", err_.Error())
+					resp, err := http.PostForm(apiExtBlackPearl, url.Values{"target_acc": {targetAcc}, "content": {pushContent}})
+					if err != nil {
+						fmt.Printf("Got error from server: %s\n", err.Error())
 					} else {
 						defer resp.Body.Close()
 						body, err := ioutil.ReadAll(resp.Body)

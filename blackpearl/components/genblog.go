@@ -1,17 +1,16 @@
-package main
+package components
 
 import (
 	"fmt"
-	"os/user"
-	"time"
 	"github.com/abadojack/whatlanggo"
-	"os"
-	"path/filepath"
-	"strings"
 	"github.com/daviddengcn/go-colortext"
 	"log"
+	"os"
+	"os/user"
+	"path/filepath"
+	"strings"
+	"time"
 )
-
 
 type Blog struct {
 	Title         string
@@ -35,13 +34,13 @@ func IntelligentCategorize(title string, lang whatlanggo.Lang) string {
 }
 
 // automatically detect language
-func detectLang(title string) whatlanggo.Lang {
+func DetectLang(title string) whatlanggo.Lang {
 	info := whatlanggo.Detect(title)
 	lang := info.Lang
 	return lang
 }
 
-func getCurrentUserName() string {
+func GetCurrentUserName() string {
 	currentUserName, err := user.Current()
 	if err != nil {
 		ct.Foreground(ct.Red, false)
@@ -49,14 +48,14 @@ func getCurrentUserName() string {
 	}
 	return currentUserName.Username
 }
-func getNowTimeString() string {
+func GetNowTimeString() string {
 	t := time.Now()
 	tFormat := t.Format("2006-01-02 15:05:05")
 	return tFormat
 }
 
 // this can be change individually
-func getCopyrightInfo(lang whatlanggo.Lang) string {
+func GetCopyrightInfo(lang whatlanggo.Lang) string {
 	copyright := ""
 	if lang == whatlanggo.Cmn {
 		copyright = "> " + "本文由在当地较为英俊的男子金天大神原创，版权所有，欢迎转载，本文首发地址 https://jinfagang.github.io 。" +
@@ -69,7 +68,7 @@ func getCopyrightInfo(lang whatlanggo.Lang) string {
 }
 
 // generate summary according to title
-func generateSummary(title string, lang whatlanggo.Lang) string {
+func GenerateSummary(title string, lang whatlanggo.Lang) string {
 	pref := ""
 	if lang == whatlanggo.Eng {
 		pref = "Introduce something about "
@@ -157,7 +156,7 @@ int main() {
 }`
 	cmakeContent := "cmake_minimum_required(VERSION 3.8)\n" +
 		"project(" + projectName + ")\nset(CMAKE_CXX_STANDARD 11)\n\n\n" +
-			`file(GLOB_RECURSE source_files
+		`file(GLOB_RECURSE source_files
 				 src/*.cpp
 				  lib/*.cpp 
 				*.cpp
@@ -172,9 +171,8 @@ endif ()
 
 set(BUILD_SHARED_LIBS OFF)` +
 		"\n\n\n" +
-			"add_executable(main ${source_files})\n" +
-				"target_link_libraries(main ${OpenCV_LIBS})"
-
+		"add_executable(main ${source_files})\n" +
+		"target_link_libraries(main ${OpenCV_LIBS})"
 
 	f, err := os.Create(mCppFile)
 	if err != nil {
