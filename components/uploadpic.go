@@ -23,4 +23,6 @@ func UploadFromLocal(imgFilePath string) string {
 	// 	fmt.Println("provide an image path.")
 	// 	return ""
 	// }
+	return ""
 }
+

@@ -1,24 +1,28 @@
 package main
 
 import (
+	"blackpearl/mui"
 	"encoding/json"
 	"fmt"
+	"github.com/gizak/termui/v3/widgets"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
+	"termui"
 	"time"
 
 	//"./picbed"
-	"github.com/atotto/clipboard"
+	//"github.com/atotto/clipboard"
 	"github.com/urfave/cli/v2"
 	"gitlab.com/jinfagang/colorgo"
 	"gopkg.in/yaml.v2"
 
-	"blackpearl/models"
 	"blackpearl/components"
+	"blackpearl/models"
+	ui "github.com/gizak/termui/v3"
 )
 
 func welcome() {
@@ -271,8 +275,29 @@ func main() {
 		},
 	}
 
-	err = app.Run(os.Args)
-	if err != nil {
-		log.Fatal(err)
+	if len(os.Args) > 1 {
+		err = app.Run(os.Args)
+		if err != nil {
+			log.Fatal(err)
+		}
+	} else {
+		fmt.Println("enter panel...")
+		mui.InitUI()
+
+		//win := mui.GetTodoMainWindow()
+		//termui.Render(win)
+
+		p := widgets.NewParagraph()
+		p.Text = "Hello World!"
+		p.SetRect(0, 0, 25, 5)
+
+		ui.Render(p)
+
+		for e := range ui.PollEvents() {
+			if e.Type == ui.KeyboardEvent {
+				break
+			}
+		}
 	}
+
 }
