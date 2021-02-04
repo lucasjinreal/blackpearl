@@ -4,14 +4,12 @@ import (
 	"blackpearl/mui"
 	"encoding/json"
 	"fmt"
-	"github.com/gizak/termui/v3/widgets"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
-	"termui"
 	"time"
 
 	//"./picbed"
@@ -284,20 +282,17 @@ func main() {
 		fmt.Println("enter panel...")
 		mui.InitUI()
 
-		//win := mui.GetTodoMainWindow()
-		//termui.Render(win)
-
-		p := widgets.NewParagraph()
-		p.Text = "Hello World!"
-		p.SetRect(0, 0, 25, 5)
-
-		ui.Render(p)
-
-		for e := range ui.PollEvents() {
-			if e.Type == ui.KeyboardEvent {
-				break
-			}
+		if err := ui.Init(); err != nil {
+			log.Fatalf("failed to initialize termui: %v", err)
 		}
+		defer ui.Close()
+
+		p := mui.GetTodoMainWindow()
+		l := mui.GetList()
+
+		ui.Render(p, l)
+		mui.HoldUI()
+
 	}
 
 }

@@ -1,3 +1,5 @@
 .idea/
 *.exe
 bin/
+vendor/
+
