@@ -7,8 +7,10 @@ import (
 
 func GetTodoMainWindow() *widgets.Paragraph {
 	p := widgets.NewParagraph()
-	p.Text = "Hello World! this is todo main window"
-	p.SetRect(0, 0, 25, 5)
+	p.Text = "Hello! Welcome aboard BlackPearl!\n This is your daily monitor!\n欢迎登陆黑珍珠号!"
+	p.TextStyle.Fg = ui.ColorBlue
+	p.BorderStyle.Fg = ui.ColorCyan
+	p.SetRect(0, 0, 35, 5)
 	return p
 }
 
