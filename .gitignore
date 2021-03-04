@@ -2,4 +2,5 @@
 *.exe
 bin/
 vendor/
+blackpearl
 

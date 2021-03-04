@@ -82,8 +82,8 @@ I want built **blackpearl** into a powerful golang utils which means we should p
 - [ ] do something like scrap;
 - [x] update picbed package
 - [x] integrate with my ultimate uranus universe;
-- [ ] reminder me things all the time.
-- [ ] Does it able to send me notification on Linux?
+- [ ] Add `blackpearl daybreak login` to login on daybreak;
+- [ ] Add todo panel, and interactive on todo status, as well as editing on every single todos.
 
 ## Copyright
 
