@@ -1,7 +1,6 @@
 package main
 
 import (
-	"blackpearl/mui"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -9,7 +8,9 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"os/signal"
 	"path/filepath"
+	"syscall"
 	"time"
 
 	//"./picbed"
@@ -18,9 +19,45 @@ import (
 	"gitlab.com/jinfagang/colorgo"
 	"gopkg.in/yaml.v2"
 
-	"blackpearl/components"
-	"blackpearl/models"
+	"blackpearl/src/components"
+	"blackpearl/src/models"
+
+	w "blackpearl/src/widgets"
 	ui "github.com/gizak/termui/v3"
+)
+
+const (
+	appName                   = "blackpearl"
+	version                   = "0.0.1"
+	graphHorizontalScaleDelta = 3
+)
+
+var (
+	stderrLogger = log.New(os.Stderr, "", 0)
+
+	graphHorizontalScale = 7
+	helpVisible          = false
+
+	updateInterval = time.Second
+	minimalMode    = false
+	averageLoad    = false
+	percpuLoad     = false
+	// tempScale      = w.Celcius
+	battery   = false
+	statusbar = false
+	// netInterface   = w.NET_INTERFACE_ALL
+
+	// cpu  *w.CpuWidget
+	batt *w.BatteryWidget
+	// mem  *w.MemWidget
+	// proc *w.ProcWidget
+	// net  *w.NetWidget
+	disk *w.DiskWidget
+	// temp *w.TempWidget
+	help *w.HelpMenu
+	grid *ui.Grid
+	bar  *w.StatusBar
+	todo *w.TodoWidget
 )
 
 func welcome() {
@@ -280,19 +317,195 @@ func main() {
 		}
 	} else {
 		fmt.Println("enter panel...")
-		mui.InitUI()
+		if err := ui.Init(); err != nil {
+			stderrLogger.Fatalf("failed to initialize termui: %v", err)
+		}
+		defer ui.Close()
+
+		initWidgets()
+		setupGrid()
+
+		termWidth, termHeight := ui.TerminalDimensions()
+		if statusbar {
+			grid.SetRect(0, 0, termWidth, termHeight-1)
+		} else {
+			grid.SetRect(0, 0, termWidth, termHeight)
+		}
+		help.Resize(termWidth, termHeight)
+
+		ui.Render(grid)
+		if statusbar {
+			bar.SetRect(0, termHeight-1, termWidth, termHeight)
+			ui.Render(bar)
+		}
 
 		if err := ui.Init(); err != nil {
 			log.Fatalf("failed to initialize termui: %v", err)
 		}
 		defer ui.Close()
 
-		p := mui.GetTodoMainWindow()
-		l := mui.GetList()
-
-		ui.Render(p, l)
-		mui.HoldUI()
+		eventLoop()
 
 	}
 
+}
+
+func setupGrid() {
+	grid = ui.NewGrid()
+
+	var row1 ui.GridItem
+	row1 = ui.NewRow(1.0/3,
+		ui.NewCol(2.0/3, todo),
+		ui.NewCol(1.0/3, batt),
+	)
+	grid.Set(
+		row1,
+		ui.NewRow(1.0/3,
+			ui.NewCol(1.0/3,
+				ui.NewRow(1.0/2, disk),
+				ui.NewRow(1.0/2, todo),
+			),
+			ui.NewCol(2.0/3, batt),
+		),
+	)
+}
+
+func initWidgets() {
+	batt = w.NewBatteryWidget(graphHorizontalScale)
+	bar = w.NewStatusBar()
+	todo = w.NewTodoWidget()
+	// proc = w.NewProcWidget()
+	disk = w.NewDiskWidget()
+
+	help = w.NewHelpMenu()
+
+}
+
+func eventLoop() {
+	drawTicker := time.NewTicker(updateInterval).C
+
+	// handles kill signal sent to gotop
+	sigTerm := make(chan os.Signal, 2)
+	signal.Notify(sigTerm, os.Interrupt, syscall.SIGTERM)
+
+	uiEvents := ui.PollEvents()
+
+	previousKey := ""
+
+	for {
+		select {
+		case <-sigTerm:
+			return
+		case <-drawTicker:
+			if !helpVisible {
+				ui.Render(grid)
+				if statusbar {
+					ui.Render(bar)
+				}
+			}
+		case e := <-uiEvents:
+			switch e.ID {
+			case "q", "<C-c>":
+				return
+			case "?":
+				helpVisible = !helpVisible
+			case "<Resize>":
+				payload := e.Payload.(ui.Resize)
+				termWidth, termHeight := payload.Width, payload.Height
+				if statusbar {
+					grid.SetRect(0, 0, termWidth, termHeight-1)
+					bar.SetRect(0, termHeight-1, termWidth, termHeight)
+				} else {
+					grid.SetRect(0, 0, payload.Width, payload.Height)
+				}
+				help.Resize(payload.Width, payload.Height)
+				ui.Clear()
+			}
+
+			if helpVisible {
+				switch e.ID {
+				case "?":
+					ui.Clear()
+					ui.Render(help)
+				case "<Escape>":
+					helpVisible = false
+					ui.Render(grid)
+				case "<Resize>":
+					ui.Render(help)
+				}
+			} else {
+				switch e.ID {
+				case "?":
+					ui.Render(grid)
+				case "h":
+					graphHorizontalScale += graphHorizontalScaleDelta
+					// cpu.HorizontalScale = graphHorizontalScale
+					// mem.HorizontalScale = graphHorizontalScale
+					// ui.Render(cpu, mem)
+				case "l":
+					if graphHorizontalScale > graphHorizontalScaleDelta {
+						graphHorizontalScale -= graphHorizontalScaleDelta
+						// cpu.HorizontalScale = graphHorizontalScale
+						// mem.HorizontalScale = graphHorizontalScale
+						// ui.Render(cpu, mem)
+					}
+				case "<Resize>":
+					ui.Render(grid)
+					if statusbar {
+						ui.Render(bar)
+					}
+				case "<MouseLeft>":
+					payload := e.Payload.(ui.Mouse)
+					todo.HandleClick(payload.X, payload.Y)
+					ui.Render(todo)
+				case "k", "<Up>", "<MouseWheelUp>":
+					todo.ScrollUp()
+					ui.Render(todo)
+				case "j", "<Down>", "<MouseWheelDown>":
+					todo.ScrollDown()
+					ui.Render(todo)
+				case "<Home>":
+					todo.ScrollTop()
+					ui.Render(todo)
+				case "g":
+					if previousKey == "g" {
+						todo.ScrollTop()
+						ui.Render(todo)
+					}
+				case "G", "<End>":
+					todo.ScrollBottom()
+					ui.Render(todo)
+				case "<C-d>":
+					todo.ScrollHalfPageDown()
+					ui.Render(todo)
+				case "<C-u>":
+					todo.ScrollHalfPageUp()
+					ui.Render(todo)
+				case "<C-f>":
+					todo.ScrollPageDown()
+					ui.Render(todo)
+				case "<C-b>":
+					todo.ScrollPageUp()
+					ui.Render(todo)
+				case "d":
+					if previousKey == "d" {
+						// proc.KillProc()
+					}
+				case "<Tab>":
+					// proc.ToggleShowingGroupedProcs()
+					ui.Render(todo)
+				case "m", "c", "p":
+					// proc.ChangeProcSortMethod(w.ProcSortMethod(e.ID))
+					ui.Render(todo)
+				}
+
+				if previousKey == e.ID {
+					previousKey = ""
+				} else {
+					previousKey = e.ID
+				}
+			}
+
+		}
+	}
 }
